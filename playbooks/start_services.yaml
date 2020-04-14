@@ -1,47 +1,38 @@
 ---
-- name: Start Services 
-  hosts: all #08
+- name: R1soft Agent Installation
+  hosts: all
   become: true
   become_method: sudo
   user: centos
-  ignore_errors: true                #Dont stop if there are errors
   tasks:
-  - name: Start r1soft on CentOS 7
-    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
-    systemd:
-      name: sbm-agent
-      state: started
-    ignore_errors: true         
-
-
-  - name: Start r1soft CentOS 6
+  - name: Create repo
     when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "6")
-    service:
-      name: cdp-agent
-      state: started
-    ignore_errors: true    
+    copy:
+      src: r1soft.repo
+      dest: /etc/yum.repos.d/
 
+  - name: Install agent
+    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "6")
+    package:  
+      name: serverbackup-enterprise-agent   
+      state: installed 
+    notify: AGENT_RESTART
 
+  - name: Stop iptables
+    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "6")
+    service: 
+      name: iptables
+      state: stopped
+      enabled: false
 
-  - name: Start Filebeat
-    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
-    systemd:
-      name: filebeat
-      state: started
-    ignore_errors: true 
+  - name: Get Key
+    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "6")
+    shell: "r1soft-setup --get-key http://backup.acirrustech.com/" 
 
-  - name: Start  NRPE
-    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
-    systemd:
-      name: npre
-      state: started
-    ignore_errors: true 
-
-
-  - name: Start MariaDb
-    when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
-    systemd:
-      name: mariadb
-      state: started
-    ignore_errors: true 
-
+  
+  handlers: 
+  - name: AGENT_RESTART
+    service: 
+      name: cdp-agent 
+      state: restarted
+      enabled: true
