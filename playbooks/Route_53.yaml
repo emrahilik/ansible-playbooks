@@ -1,0 +1,12 @@
+---
+- name: Create route53 entry
+  hosts: ip address
+  tasks:
+    - name: Route53 a record
+      route53:
+        state: "present"
+        zone: "yusufilik.com"
+        record: "wordpress.yusufilik.com"
+        type: A
+        ttl: 7200
+        value: "ip address" #change Ip
